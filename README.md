@@ -1,4 +1,4 @@
-# phy
+# interpret_phy
 
 This library facilitates cell layout.
 
