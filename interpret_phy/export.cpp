@@ -34,3 +34,18 @@ void emitGDS(gdstk::Library &lib, const Layout &layout) {
 	lib.cell_array.append(cell);
 }
 
+void emitGDS(gdstk::Library &lib, const Library &library, set<string> cellNames) {
+	for (auto cell = library.cells.begin(); cell != library.cells.end(); cell++) {
+		if (cellNames.empty() or cellNames.find(cell->name) != cellNames.end()) {
+			emitGDS(lib, *cell);
+		}
+	}
+}
+
+void emitGDS(string libname, string filename, const Library &library, set<string> cellNames) {
+	gdstk::Library lib = {};
+	lib.init(libname.c_str(), library.tech->dbunit*1e-6, library.tech->dbunit*1e-6);
+	emitGDS(lib, library, cellNames);
+	lib.write_gds(filename.c_str(), 0, NULL);
+	lib.free_all();
+}
