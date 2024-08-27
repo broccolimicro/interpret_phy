@@ -1,8 +1,8 @@
 #include "export.h"
 
-using namespace phy;
+namespace phy {
 
-void emitGDS(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int layer) {
+void export_rect(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int layer) {
 	cell.polygon_array.append(new gdstk::Polygon(
 		gdstk::rectangle(
 			gdstk::Vec2{(double)rect.ll[0], (double)rect.ll[1]},
@@ -19,33 +19,35 @@ void emitGDS(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int laye
 	}
 }
 
-void emitGDS(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
+void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
 	for (auto r = layer.geo.begin(); r != layer.geo.end(); r++) {
-		emitGDS(cell, *r, layout, layer.draw);
+		export_rect(cell, *r, layout, layer.draw);
 	}
 }
 
-void emitGDS(gdstk::Library &lib, const Layout &layout) {
+void export_layout(gdstk::Library &lib, const Layout &layout) {
 	gdstk::Cell *cell = new gdstk::Cell();
 	cell->init(layout.name.c_str());
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
-		emitGDS(*cell, *layer, layout);
+		export_layer(*cell, *layer, layout);
 	}
 	lib.cell_array.append(cell);
 }
 
-void emitGDS(gdstk::Library &lib, const Library &library, set<string> cellNames) {
+void export_library(gdstk::Library &lib, const Library &library, set<string> cellNames) {
 	for (auto cell = library.cells.begin(); cell != library.cells.end(); cell++) {
 		if (cellNames.empty() or cellNames.find(cell->name) != cellNames.end()) {
-			emitGDS(lib, *cell);
+			export_layout(lib, *cell);
 		}
 	}
 }
 
-void emitGDS(string libname, string filename, const Library &library, set<string> cellNames) {
+void export_library(string libname, string filename, const Library &library, set<string> cellNames) {
 	gdstk::Library lib = {};
 	lib.init(libname.c_str(), library.tech->dbunit*1e-6, library.tech->dbunit*1e-6);
-	emitGDS(lib, library, cellNames);
+	export_library(lib, library, cellNames);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
+}
+
 }

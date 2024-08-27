@@ -3,6 +3,8 @@
 #include <gdstk/gdstk.hpp>
 #include <phy/Layout.h>
 
-using namespace phy;
+namespace phy {
 
-void loadGDS(Layout &layout, const Tech &tech, string path, string cellName);
+void import_layout(Layout &layout, const Tech &tech, string path, string cellName);
+
+}

@@ -1,10 +1,11 @@
 #include "import.h"
 #include <limits>
 
-using namespace phy;
 using namespace std;
 
-void loadGDS(Layout &layout, const Tech &tech, string path, string cellName) {
+namespace phy {
+
+void import_layout(Layout &layout, const Tech &tech, string path, string cellName) {
 	gdstk::Library lib = gdstk::read_gds(path.c_str(), tech.dbunit*1e-6, tech.dbunit*1e-6, nullptr, nullptr);
 	gdstk::Cell *gdsCell = lib.get_cell(cellName.c_str());
 	if (gdsCell == nullptr) {
@@ -55,3 +56,4 @@ void loadGDS(Layout &layout, const Tech &tech, string path, string cellName) {
 	lib.free_all();
 }
 
+}
