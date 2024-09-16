@@ -7,7 +7,7 @@ GTEST        := ../../googletest
 GTEST_I      := -I$(GTEST)/googletest/include -I.
 GTEST_L      := -L$(GTEST)/build/lib -L.
 
-CXXFLAGS      = -std=c++14 -O2 -g -Wall -Wno-missing-braces -Wno-varargs -fmessage-length=0 $(DEPEND:%=-I../%) -I.
+CXXFLAGS      = -std=c++14 -O2 -g -Wall -fmessage-length=0 $(DEPEND:%=-I../%) -I.
 LDFLAGS	      =  
 
 SOURCES	     := $(shell mkdir -p $(SRCDIR); find $(SRCDIR) -name '*.cpp')
@@ -38,7 +38,7 @@ else
         CXXFLAGS += -D LINUX
     endif
     ifeq ($(UNAME_S),Darwin)
-        CXXFLAGS += -D OSX -mmacos-version-min=12.0
+        CXXFLAGS += -D OSX -mmacos-version-min=12.0 -Wno-missing-braces -Wno-varargs
     endif
     UNAME_P := $(shell uname -p)
     ifeq ($(UNAME_P),x86_64)
