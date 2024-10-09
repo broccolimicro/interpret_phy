@@ -11,6 +11,8 @@ bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, 
 		return false;
 	}
 
+	layout.name = cellName;
+
 	int polyCount = 0;
 
 	gdstk::Array<gdstk::Polygon*> polys;
