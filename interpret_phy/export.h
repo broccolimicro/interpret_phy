@@ -16,5 +16,7 @@ void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout);
 void export_layout(gdstk::Library &lib, const Layout &layout);
 void export_library(gdstk::Library &lib, const Library &library, set<string> cellNames = set<string>());
 void export_library(string libname, string filename, const Library &library, set<string> cellNames = set<string>());
+void export_cell(string filename, const Layout &layout);
+void export_cells(const phy::Library &lib);
 
 }

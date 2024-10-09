@@ -1,5 +1,9 @@
 #include "export.h"
 
+#include <filesystem>
+
+using namespace std;
+
 namespace phy {
 
 void export_rect(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int layer) {
@@ -48,6 +52,28 @@ void export_library(string libname, string filename, const Library &library, set
 	export_library(lib, library, cellNames);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
+}
+
+void export_cell(string filename, const Layout &layout) {
+	gdstk::Library lib = {};
+	lib.init(layout.name.c_str(), layout.tech.dbunit*1e-6, layout.tech.dbunit*1e-6);
+	export_layout(lib, layout);
+	lib.write_gds(filename.c_str(), 0, NULL);
+	lib.free_all();
+}
+
+void export_cells(const phy::Library &lib) {
+	if (not filesystem::exists(lib.libPath)) {
+		filesystem::create_directory(lib.libPath);
+	}
+	for (int i = 0; i < (int)lib.macros.size(); i++) {
+		if (lib.macros[i].name.rfind("cell_", 0) == 0) {
+			string cellPath = lib.libPath + "/" + lib.macros[i].name+".gds";
+			if (not filesystem::exists(cellPath)) {
+				export_cell(cellPath, lib.macros[i]);
+			}
+		}
+	}
 }
 
 }
