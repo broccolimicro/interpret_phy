@@ -5,11 +5,10 @@ using namespace std;
 
 namespace phy {
 
-void import_layout(Layout &layout, const Tech &tech, string path, string cellName) {
-	gdstk::Library lib = gdstk::read_gds(path.c_str(), tech.dbunit*1e-6, tech.dbunit*1e-6, nullptr, nullptr);
+bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, string cellName) {
 	gdstk::Cell *gdsCell = lib.get_cell(cellName.c_str());
 	if (gdsCell == nullptr) {
-		return;
+		return false;
 	}
 
 	int polyCount = 0;
@@ -52,8 +51,14 @@ void import_layout(Layout &layout, const Tech &tech, string path, string cellNam
 	if (polyCount > 0) {
 		printf("found %d polygons, only rectangles are supported\n", polyCount);
 	}
+	return true;
+}
 
+bool import_layout(Layout &layout, const Tech &tech, string path, string cellName) {
+	gdstk::Library lib = gdstk::read_gds(path.c_str(), tech.dbunit*1e-6, tech.dbunit*1e-6, nullptr, nullptr);
+	bool result = import_layout(layout, tech, lib, cellName);
 	lib.free_all();
+	return result;
 }
 
 }

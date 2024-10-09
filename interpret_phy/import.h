@@ -7,6 +7,7 @@
 
 namespace phy {
 
-void import_layout(Layout &layout, const Tech &tech, string path, string cellName);
+bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, string cellName);
+bool import_layout(Layout &layout, const Tech &tech, string path, string cellName);
 
 }
