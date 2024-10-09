@@ -40,7 +40,7 @@ void export_layout(gdstk::Library &lib, const Layout &layout) {
 
 void export_library(gdstk::Library &lib, const Library &library, set<string> cellNames) {
 	for (auto cell = library.macros.begin(); cell != library.macros.end(); cell++) {
-		if (cellNames.empty() or cellNames.find(cell->name) != cellNames.end()) {
+		if (not cell->name.empty() and (cellNames.empty() or cellNames.find(cell->name) != cellNames.end())) {
 			export_layout(lib, *cell);
 		}
 	}
@@ -48,7 +48,7 @@ void export_library(gdstk::Library &lib, const Library &library, set<string> cel
 
 void export_library(string libname, string filename, const Library &library, set<string> cellNames) {
 	gdstk::Library lib = {};
-	lib.init(libname.c_str(), library.tech.dbunit*1e-6, library.tech.dbunit*1e-6);
+	lib.init(libname.c_str(), ((double)library.tech.dbunit)*1e-6, ((double)library.tech.dbunit)*1e-6);
 	export_library(lib, library, cellNames);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
@@ -56,7 +56,7 @@ void export_library(string libname, string filename, const Library &library, set
 
 void export_cell(string filename, const Layout &layout) {
 	gdstk::Library lib = {};
-	lib.init(layout.name.c_str(), layout.tech.dbunit*1e-6, layout.tech.dbunit*1e-6);
+	lib.init(layout.name.c_str(), ((double)layout.tech.dbunit)*1e-6, ((double)layout.tech.dbunit)*1e-6);
 	export_layout(lib, layout);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
