@@ -67,7 +67,7 @@ bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, 
 		
 		int net = (int)layout.nets.size();
 		for (int i = 0; i < (int)layout.nets.size(); i++) {
-			if (layout.nets[i] == txt) {
+			if (layout.nets[i].name == txt) {
 				net = i;
 				break;
 			}
