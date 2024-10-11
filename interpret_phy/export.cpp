@@ -11,11 +11,11 @@ void export_rect(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int 
 		gdstk::rectangle(
 			gdstk::Vec2{(double)rect.ll[0], (double)rect.ll[1]},
 			gdstk::Vec2{(double)rect.ur[0], (double)rect.ur[1]},
-			gdstk::make_tag(layout.tech.paint[layer].major, layout.tech.paint[layer].minor))));
+			gdstk::make_tag(layout.tech->paint[layer].major, layout.tech->paint[layer].minor))));
 
 	if (rect.hasLabel()) {
 		cell.label_array.append(new gdstk::Label{
-			.tag = gdstk::make_tag(layout.tech.paint[layer].major, layout.tech.paint[layer].minor),
+			.tag = gdstk::make_tag(layout.tech->paint[layer].major, layout.tech->paint[layer].minor),
 			.text = strdup(layout.nets[rect.net].name.c_str()),
 			.origin = gdstk::Vec2{(double)((rect.ll[0] + rect.ur[0])/2), (double)((rect.ll[1]+rect.ur[1])/2)},
 			.magnification = 1,
@@ -40,7 +40,7 @@ void export_layout(gdstk::Library &lib, const Layout &layout) {
 
 void export_layout(string filename, const Layout &layout) {
 	gdstk::Library lib = {};
-	lib.init(layout.name.c_str(), ((double)layout.tech.dbunit)*1e-6, ((double)layout.tech.dbunit)*1e-6);
+	lib.init(layout.name.c_str(), ((double)layout.tech->dbunit)*1e-6, ((double)layout.tech->dbunit)*1e-6);
 	export_layout(lib, layout);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
@@ -56,7 +56,7 @@ void export_library(gdstk::Library &lib, const Library &library, set<string> cel
 
 void export_library(string libname, string filename, const Library &library, set<string> cellNames) {
 	gdstk::Library lib = {};
-	lib.init(libname.c_str(), ((double)library.tech.dbunit)*1e-6, ((double)library.tech.dbunit)*1e-6);
+	lib.init(libname.c_str(), ((double)library.tech->dbunit)*1e-6, ((double)library.tech->dbunit)*1e-6);
 	export_library(lib, library, cellNames);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
@@ -146,7 +146,7 @@ void export_lef(string filename, const Layout &layout, int type) {
 				for (auto rect = layer->geo.begin(); rect != layer->geo.end(); rect++) {
 					if (rect->net == i) {
 						if (not found) {
-							fprintf(fptr, "\t\t\tLAYER %s ;\n", layout.tech.paint[layer->draw].name.c_str());
+							fprintf(fptr, "\t\t\tLAYER %s ;\n", layout.tech->paint[layer->draw].name.c_str());
 							found = true;
 						}
 						fprintf(fptr, "\t\t\t\tRECT %d %d %d %d ;\n", rect->ll[0], rect->ll[1], rect->ur[0], rect->ur[1]);
@@ -168,7 +168,7 @@ void export_lef(string filename, const Layout &layout, int type) {
 				not layout.nets[rect->net].isGND and
 				not layout.nets[rect->net].isSub)) {
 				if (not found) {
-					fprintf(fptr, "\t\tLAYER %s ;\n", layout.tech.paint[layer->draw].name.c_str());
+					fprintf(fptr, "\t\tLAYER %s ;\n", layout.tech->paint[layer->draw].name.c_str());
 					found = true;
 				}
 				fprintf(fptr, "\t\t\tRECT %d %d %d %d ;\n", rect->ll[0], rect->ll[1], rect->ur[0], rect->ur[1]);

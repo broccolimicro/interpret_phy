@@ -5,7 +5,7 @@ using namespace std;
 
 namespace phy {
 
-bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, string cellName) {
+bool import_layout(Layout &layout, const gdstk::Library &lib, string cellName) {
 	bool success = true;
 
 	gdstk::Cell *gdsCell = lib.get_cell(cellName.c_str());
@@ -32,7 +32,7 @@ bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, 
 		int major = gdstk::get_layer(poly->tag);
 		int minor = gdstk::get_type(poly->tag);
 
-		int draw = tech.findPaint(major, minor);
+		int draw = layout.tech->findPaint(major, minor);
 		for (int j = 0; j < (int)poly->point_array.count; j++) {
 			gdstk::Vec2 point = poly->point_array[j];
 			if ((int)point.x < ll[0]) {
@@ -79,7 +79,7 @@ bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, 
 		int major = gdstk::get_layer(label->tag);
 		int minor = gdstk::get_type(label->tag);
 
-		int draw = tech.findPaint(major, minor);
+		int draw = layout.tech->findPaint(major, minor);
 
 		bool found = false;
 		for (auto layer = layout.layers.begin(); layer != layout.layers.end() and not found; layer++) {
@@ -100,9 +100,9 @@ bool import_layout(Layout &layout, const Tech &tech, const gdstk::Library &lib, 
 	return success;
 }
 
-bool import_layout(Layout &layout, const Tech &tech, string path, string cellName) {
-	gdstk::Library lib = gdstk::read_gds(path.c_str(), ((double)tech.dbunit)*1e-6, ((double)tech.dbunit)*1e-6, nullptr, nullptr);
-	bool result = import_layout(layout, tech, lib, cellName);
+bool import_layout(Layout &layout, string path, string cellName) {
+	gdstk::Library lib = gdstk::read_gds(path.c_str(), ((double)layout.tech->dbunit)*1e-6, ((double)layout.tech->dbunit)*1e-6, nullptr, nullptr);
+	bool result = import_layout(layout, lib, cellName);
 	lib.free_all();
 	return result;
 }
