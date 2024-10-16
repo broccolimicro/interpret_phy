@@ -29,19 +29,19 @@ void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
 	}
 }
 
-void export_layout(gdstk::Library &lib, const Layout &layout) {
+gdstk::Cell *export_layout(const Layout &layout) {
 	gdstk::Cell *cell = new gdstk::Cell();
 	cell->init(layout.name.c_str());
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
 		export_layer(*cell, *layer, layout);
 	}
-	lib.cell_array.append(cell);
+	return cell;
 }
 
 void export_layout(string filename, const Layout &layout) {
 	gdstk::Library lib = {};
 	lib.init(layout.name.c_str(), ((double)layout.tech->dbunit)*1e-6, ((double)layout.tech->dbunit)*1e-6);
-	export_layout(lib, layout);
+	lib.cell_array.append(export_layout(layout));
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
 }
@@ -49,7 +49,7 @@ void export_layout(string filename, const Layout &layout) {
 void export_library(gdstk::Library &lib, const Library &library, set<string> cellNames) {
 	for (auto cell = library.macros.begin(); cell != library.macros.end(); cell++) {
 		if (not cell->name.empty() and (cellNames.empty() or cellNames.find(cell->name) != cellNames.end())) {
-			export_layout(lib, *cell);
+			lib.cell_array.append(export_layout(*cell));
 		}
 	}
 }
