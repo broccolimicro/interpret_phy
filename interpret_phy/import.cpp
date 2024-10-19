@@ -5,6 +5,40 @@ using namespace std;
 
 namespace phy {
 
+string import_name(string name) {
+	// Do name mangling
+	static map<char, char> replace = {
+		{'_', '_'},
+		{'0', '.'},
+		{'1', '['},
+		{'2', ']'},
+		{'3', '\''},
+		{'4', '('},
+		{'5', ')'},
+		{'6', '<'},
+		{'7', '>'},
+	};
+
+	string result;
+	bool escaped = false;
+	for (auto c = name.begin(); c != name.end(); c++) {
+		if (escaped) {
+			auto pos = replace.find(*c);
+			if (pos != replace.end()) {
+				result += pos->second;
+			} else {
+				result.push_back(*c);
+			}
+			escaped = false;
+		} else if (*c == '_') {
+			escaped = true;
+		} else {
+			result.push_back(*c);
+		}
+	}
+	return result;
+}
+
 bool import_layout(Layout &layout, const gdstk::Library &lib, string cellName) {
 	bool success = true;
 
@@ -63,7 +97,7 @@ bool import_layout(Layout &layout, const gdstk::Library &lib, string cellName) {
 
 		gdstk::Vec2 point = label->origin;
 		vec2i origin((int)point.x, (int)point.y);
-		string txt = label->text;
+		string txt = import_name(label->text);
 		
 		int net = (int)layout.nets.size();
 		for (int i = 0; i < (int)layout.nets.size(); i++) {

@@ -11,6 +11,7 @@ using namespace std;
 
 namespace phy {
 
+string export_name(string name);
 void export_rect(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int layer);
 void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout);
 gdstk::Cell *export_layout(const Layout &layout);

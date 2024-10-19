@@ -6,26 +6,46 @@ using namespace std;
 
 namespace phy {
 
+string export_name(string name) {
+	// Do name mangling
+	static map<char, char> replace = {
+		{'_', '_'},
+		{'.', '0'},
+		{'[', '1'},
+		{']', '2'},
+		{'\'', '3'},
+		{'(', '4'},
+		{')', '5'},
+		{'<', '6'},
+		{'>', '7'},
+	};
+
+	string result;
+	for (auto c = name.begin(); c != name.end(); c++) {
+		auto pos = replace.find(*c);
+		if (pos != replace.end()) {
+			result.push_back('_');
+			result.push_back(pos->second);
+		} else {
+			result.push_back(*c);
+		}
+	}
+	return result;
+}
+
 void export_rect(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int layer) {
 	cell.polygon_array.append(new gdstk::Polygon(
 		gdstk::rectangle(
 			gdstk::Vec2{(double)rect.ll[0], (double)rect.ll[1]},
 			gdstk::Vec2{(double)rect.ur[0], (double)rect.ur[1]},
 			gdstk::make_tag(layout.tech->paint[layer].major, layout.tech->paint[layer].minor))));
-
-	if (rect.hasLabel()) {
-		cell.label_array.append(new gdstk::Label{
-			.tag = gdstk::make_tag(layout.tech->paint[layer].major, layout.tech->paint[layer].minor),
-			.text = strdup(layout.nets[rect.net].name.c_str()),
-			.origin = gdstk::Vec2{(double)((rect.ll[0] + rect.ur[0])/2), (double)((rect.ll[1]+rect.ur[1])/2)},
-			.magnification = 1,
-		});
-	}
 }
 
 void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
-	for (auto r = layer.geo.begin(); r != layer.geo.end(); r++) {
-		export_rect(cell, *r, layout, layer.draw);
+	if (layer.draw >= 0) {
+		for (auto r = layer.geo.begin(); r != layer.geo.end(); r++) {
+			export_rect(cell, *r, layout, layer.draw);
+		}
 	}
 }
 
@@ -34,6 +54,16 @@ gdstk::Cell *export_layout(const Layout &layout) {
 	cell->init(layout.name.c_str());
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
 		export_layer(*cell, *layer, layout);
+	}
+	for (auto net = layout.nets.begin(); net != layout.nets.end(); net++) {
+		if (net->label >= 0) {
+			cell->label_array.append(new gdstk::Label{
+				.tag = gdstk::make_tag(layout.tech->paint[net->label].major, layout.tech->paint[net->label].minor),
+				.text = strdup(export_name(net->name).c_str()),
+				.origin = gdstk::Vec2{(double)net->pos[0], (double)net->pos[1]},
+				.magnification = 1,
+			});
+		}
 	}
 	return cell;
 }
@@ -145,7 +175,7 @@ void export_lef(string filename, const Layout &layout, int type) {
 				bool found = false;
 				for (auto rect = layer->geo.begin(); rect != layer->geo.end(); rect++) {
 					if (rect->net == i) {
-						if (not found) {
+						if (not found and layer->draw >= 0) {
 							fprintf(fptr, "\t\t\tLAYER %s ;\n", layout.tech->paint[layer->draw].name.c_str());
 							found = true;
 						}
@@ -167,7 +197,7 @@ void export_lef(string filename, const Layout &layout, int type) {
 				not layout.nets[rect->net].isVdd and
 				not layout.nets[rect->net].isGND and
 				not layout.nets[rect->net].isSub)) {
-				if (not found) {
+				if (not found and layer->draw >= 0) {
 					fprintf(fptr, "\t\tLAYER %s ;\n", layout.tech->paint[layer->draw].name.c_str());
 					found = true;
 				}
