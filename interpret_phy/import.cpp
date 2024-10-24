@@ -1,5 +1,7 @@
 #include "import.h"
 #include <limits>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -101,7 +103,7 @@ bool import_layout(Layout &layout, const gdstk::Library &lib, string cellName) {
 		
 		int net = (int)layout.nets.size();
 		for (int i = 0; i < (int)layout.nets.size(); i++) {
-			if (layout.nets[i].name == txt) {
+			if (std::find(layout.nets[i].names.begin(), layout.nets[i].names.end(), txt) != layout.nets[i].names.end()) {
 				net = i;
 				break;
 			}
@@ -113,22 +115,8 @@ bool import_layout(Layout &layout, const gdstk::Library &lib, string cellName) {
 		int major = gdstk::get_layer(label->tag);
 		int minor = gdstk::get_type(label->tag);
 
-		int draw = layout.tech->findPaint(major, minor);
-
-		bool found = false;
-		for (auto layer = layout.layers.begin(); layer != layout.layers.end() and not found; layer++) {
-			if (layer->draw == draw or layer->pin == draw or layer->label == draw) {
-				for (auto rect = layer->geo.begin(); rect != layer->geo.end(); rect++) {
-					vec2i cmp = rect->ll+rect->ur/2;
-					if (origin[0] >= rect->ll[0] and origin[1] >= rect->ll[1]
-						and origin[0] <= rect->ur[0] and origin[1] <= rect->ur[1]) {
-						rect->net = net;
-						found = true;
-						break;
-					}
-				}
-			}
-		}
+		int layer = layout.tech->findPaint(major, minor);
+		layout.label(layer, Label(net, origin, txt)); 
 	}
 
 	return success;

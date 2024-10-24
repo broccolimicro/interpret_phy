@@ -13,6 +13,7 @@ namespace phy {
 
 string export_name(string name);
 void export_rect(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int layer);
+void export_label(gdstk::Cell &cell, const Label &lbl, const Layout &layout, int layer);
 void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout);
 gdstk::Cell *export_layout(const Layout &layout);
 void export_layout(string filename, const Layout &layout);

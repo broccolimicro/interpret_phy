@@ -41,10 +41,22 @@ void export_rect(gdstk::Cell &cell, const Rect &rect, const Layout &layout, int 
 			gdstk::make_tag(layout.tech->paint[layer].major, layout.tech->paint[layer].minor))));
 }
 
+void export_label(gdstk::Cell &cell, const Label &lbl, const Layout &layout, int layer) {
+	cell.label_array.append(new gdstk::Label{
+			.tag = gdstk::make_tag(layout.tech->paint[layer].major, layout.tech->paint[layer].minor),
+			.text = strdup(export_name(lbl.txt).c_str()),
+			.origin = gdstk::Vec2{(double)lbl.pos[0], (double)lbl.pos[1]},
+			.magnification = 1,
+		});
+}
+
 void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
 	if (layer.draw >= 0) {
 		for (auto r = layer.geo.begin(); r != layer.geo.end(); r++) {
 			export_rect(cell, *r, layout, layer.draw);
+		}
+		for (auto l = layer.lbl.begin(); l != layer.lbl.end(); l++) {
+			export_label(cell, *l, layout, layer.draw);
 		}
 	}
 }
@@ -54,16 +66,6 @@ gdstk::Cell *export_layout(const Layout &layout) {
 	cell->init(layout.name.c_str());
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
 		export_layer(*cell, *layer, layout);
-	}
-	for (auto net = layout.nets.begin(); net != layout.nets.end(); net++) {
-		if (net->label >= 0) {
-			cell->label_array.append(new gdstk::Label{
-				.tag = gdstk::make_tag(layout.tech->paint[net->label].major, layout.tech->paint[net->label].minor),
-				.text = strdup(export_name(net->name).c_str()),
-				.origin = gdstk::Vec2{(double)net->pos[0], (double)net->pos[1]},
-				.magnification = 1,
-			});
-		}
 	}
 	return cell;
 }
@@ -149,7 +151,11 @@ void export_lef(string filename, const Layout &layout, int type) {
 				direction = "INPUT";
 			}
 
-			fprintf(fptr, "\tPIN %s\n", n->name.c_str());
+			if (not n->names.empty()) {
+				fprintf(fptr, "\tPIN %s\n", n->names[0].c_str());
+			} else {
+				fprintf(fptr, "\tPIN __%d\n", i);
+			}
 			if (n->isSub) {
 				fprintf(fptr, "\t\tDIRECTION INOUT ;\n");
 				fprintf(fptr, "\t\tUSE POWER ;\n");
