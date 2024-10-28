@@ -52,8 +52,10 @@ void export_label(gdstk::Cell &cell, const Label &lbl, const Layout &layout, int
 
 void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
 	if (layer.draw >= 0) {
-		for (auto r = layer.geo.begin(); r != layer.geo.end(); r++) {
-			export_rect(cell, *r, layout, layer.draw);
+		if (not layout.tech->isLabel(layer.draw)) {
+			for (auto r = layer.geo.begin(); r != layer.geo.end(); r++) {
+				export_rect(cell, *r, layout, layer.draw);
+			}
 		}
 		for (auto l = layer.lbl.begin(); l != layer.lbl.end(); l++) {
 			export_label(cell, *l, layout, layer.draw);
@@ -65,7 +67,7 @@ gdstk::Cell *export_layout(const Layout &layout) {
 	gdstk::Cell *cell = new gdstk::Cell();
 	cell->init(layout.name.c_str());
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
-		export_layer(*cell, *layer, layout);
+		export_layer(*cell, layer->second, layout);
 	}
 	return cell;
 }
@@ -179,10 +181,10 @@ void export_lef(string filename, const Layout &layout, int type) {
 			fprintf(fptr, "\t\tPORT\n");
 			for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
 				bool found = false;
-				for (auto rect = layer->geo.begin(); rect != layer->geo.end(); rect++) {
+				for (auto rect = layer->second.geo.begin(); rect != layer->second.geo.end(); rect++) {
 					if (rect->net == i) {
-						if (not found and layer->draw >= 0) {
-							fprintf(fptr, "\t\t\tLAYER %s ;\n", layout.tech->paint[layer->draw].name.c_str());
+						if (not found and layer->first >= 0) {
+							fprintf(fptr, "\t\t\tLAYER %s ;\n", layout.tech->paint[layer->first].name.c_str());
 							found = true;
 						}
 						fprintf(fptr, "\t\t\t\tRECT %d %d %d %d ;\n", rect->ll[0], rect->ll[1], rect->ur[0], rect->ur[1]);
@@ -196,15 +198,15 @@ void export_lef(string filename, const Layout &layout, int type) {
 	fprintf(fptr, "\tOBS\n");
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
 		bool found = false;
-		for (auto rect = layer->geo.begin(); rect != layer->geo.end(); rect++) {
+		for (auto rect = layer->second.geo.begin(); rect != layer->second.geo.end(); rect++) {
 			if (rect->net < 0 or (
 				not layout.nets[rect->net].isInput and
 				not layout.nets[rect->net].isOutput and
 				not layout.nets[rect->net].isVdd and
 				not layout.nets[rect->net].isGND and
 				not layout.nets[rect->net].isSub)) {
-				if (not found and layer->draw >= 0) {
-					fprintf(fptr, "\t\tLAYER %s ;\n", layout.tech->paint[layer->draw].name.c_str());
+				if (not found and layer->first >= 0) {
+					fprintf(fptr, "\t\tLAYER %s ;\n", layout.tech->paint[layer->first].name.c_str());
 					found = true;
 				}
 				fprintf(fptr, "\t\t\tRECT %d %d %d %d ;\n", rect->ll[0], rect->ll[1], rect->ur[0], rect->ur[1]);

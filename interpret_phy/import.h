@@ -4,11 +4,14 @@
 #define M_PI 3.14159265358979323846
 #include <gdstk/gdstk.hpp>
 #include <phy/Layout.h>
+#include <phy/Library.h>
 
 namespace phy {
 
 string import_name(string name);
+bool import_layout(Layout &layout, const gdstk::Cell *gdsCell);
 bool import_layout(Layout &layout, const gdstk::Library &lib, string cellName);
 bool import_layout(Layout &layout, string path, string cellName);
+bool import_library(phy::Library &lib, string path);
 
 }
