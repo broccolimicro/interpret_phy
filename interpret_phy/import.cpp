@@ -45,45 +45,22 @@ bool import_layout(Layout &layout, const gdstk::Cell *gdsCell) {
 	bool success = true;
 	layout.name = gdsCell->name;
 
-	int polyCount = 0;
-
 	gdstk::Array<gdstk::Polygon*> polys{0,0,nullptr};
 	gdsCell->get_polygons(true, true, -1, false, gdstk::Tag{}, polys);
 	for (int i = 0; i < (int)polys.count; i++) {
 		gdstk::Polygon* poly = polys[i];
-		if (poly->point_array.count != 4) {
-			polyCount++;
-			continue;
-		}
 
-		vec2i ll(std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
-		vec2i ur(std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
-	
 		int major = gdstk::get_layer(poly->tag);
 		int minor = gdstk::get_type(poly->tag);
-
 		int draw = layout.tech->findPaint(major, minor);
+
+		Poly p;
 		for (int j = 0; j < (int)poly->point_array.count; j++) {
 			gdstk::Vec2 point = poly->point_array[j];
-			if ((int)point.x < ll[0]) {
-				ll[0] = (int)point.x;
-			}
-			if ((int)point.x > ur[0]) {
-				ur[0] = (int)point.x;
-			}
-			if ((int)point.y < ll[1]) {
-				ll[1] = (int)point.y;
-			}
-			if ((int)point.y > ur[1]) {
-				ur[1] = (int)point.y;
-			}
+			p.v.push_back(vec2i((int)point.x, (int)point.y));
 		}
 
-		layout.push(draw, Rect(-1, ll, ur));
-	}
-	if (polyCount > 0) {
-		printf("found %d polygons, only rectangles are supported\n", polyCount);
-		success = false;
+		layout.push(draw, p);
 	}
 
 	gdstk::Array<gdstk::Label*> labels{0,0,nullptr};
@@ -101,6 +78,8 @@ bool import_layout(Layout &layout, const gdstk::Cell *gdsCell) {
 		int layer = layout.tech->findPaint(major, minor);
 		layout.label(layer, Label(-1, origin, txt)); 
 	}
+
+	layout.normalize();
 
 	return success;
 }
