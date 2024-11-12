@@ -46,25 +46,30 @@ bool import_layout(Layout &layout, const gdstk::Cell *gdsCell) {
 	layout.name = gdsCell->name;
 
 	gdstk::Array<gdstk::Polygon*> polys{0,0,nullptr};
-	gdsCell->get_polygons(true, true, -1, false, gdstk::Tag{}, polys);
+	gdsCell->get_polygons(true, true, 0, false, gdstk::Tag{}, polys);
 	for (int i = 0; i < (int)polys.count; i++) {
 		gdstk::Polygon* poly = polys[i];
 
 		int major = gdstk::get_layer(poly->tag);
 		int minor = gdstk::get_type(poly->tag);
 		int draw = layout.tech->findPaint(major, minor);
+		if (draw < 0) {
+			printf("warning: unrecognized gds layer %d/%d\n", major, minor);
+			continue;
+		}
 
 		Poly p;
 		for (int j = 0; j < (int)poly->point_array.count; j++) {
 			gdstk::Vec2 point = poly->point_array[j];
 			p.v.push_back(vec2i((int)point.x, (int)point.y));
 		}
+		p.normalize();
 
 		layout.push(draw, p);
 	}
 
 	gdstk::Array<gdstk::Label*> labels{0,0,nullptr};
-	gdsCell->get_labels(true, -1, false, gdstk::Tag{}, labels);
+	gdsCell->get_labels(true, 0, false, gdstk::Tag{}, labels);
 	for (int i = 0; i < (int)labels.count; i++) {
 		gdstk::Label* label = labels[i];
 
@@ -80,7 +85,6 @@ bool import_layout(Layout &layout, const gdstk::Cell *gdsCell) {
 	}
 
 	layout.normalize();
-
 	return success;
 }
 
