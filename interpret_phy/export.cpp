@@ -133,10 +133,10 @@ void export_lef(string filename, const Layout &layout, int type) {
 	default: fprintf(fptr, "CLASS CORE ;\n");
 	}
 
-	Rect bbox = layout.bbox();
-	vec2i size = bbox.ur-bbox.ll;
-	fprintf(fptr, "\tORIGIN %d %d ;\n", -bbox.ll[0], -bbox.ll[1]);
-	fprintf(fptr, "\tFOREIGN %s %d %d ;\n", layout.name.c_str(), bbox.ll[0], bbox.ll[1]);
+	Rect box = layout.box;
+	vec2i size = box.ur-box.ll;
+	fprintf(fptr, "\tORIGIN %d %d ;\n", -box.ll[0], -box.ll[1]);
+	fprintf(fptr, "\tFOREIGN %s %d %d ;\n", layout.name.c_str(), box.ll[0], box.ll[1]);
 	fprintf(fptr, "\tSIZE %d BY %d ;\n", size[0], size[1]);
 	fprintf(fptr, "\tSYMMETRY X Y ;\n");
 	if (type != BLOCK) {
