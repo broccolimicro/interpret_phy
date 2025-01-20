@@ -111,6 +111,34 @@ gdstk::Cell *export_layout(const Layout &layout, const map<int, gdstk::Cell*> *c
 	return cell;
 }
 
+void export_layout(gdstk::GdsWriter &writer, const Library &library, int idx, map<int, gdstk::Cell*> &cells) {
+	if (cells.find(idx) != cells.end()) {
+		return;
+	}
+
+	vector<int> stack(1, idx);
+	while (not stack.empty()) {
+		int curr = stack.back();
+		auto currMacro = library.macros.begin()+curr;
+		
+		bool done = true;
+		for (auto i = currMacro->inst.begin(); i != currMacro->inst.end(); i++) {
+			if (cells.find(i->macro) == cells.end()) {
+				done = false;
+				stack.erase(std::remove(stack.begin(), stack.end(), i->macro), stack.end());
+				stack.push_back(i->macro);
+			}
+		}
+
+		if (done) {
+			gdstk::Cell *gds = export_layout(library.macros[curr], &cells);
+			writer.write_cell(*gds);
+			cells.insert({curr, gds});
+			stack.pop_back();
+		}
+	}
+}
+
 void export_layout(string filename, const Layout &layout) {
 	gdstk::Library lib = {};
 	lib.init(layout.name.c_str(), ((double)layout.tech->dbunit)*1e-6, ((double)layout.tech->dbunit)*1e-6);

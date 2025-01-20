@@ -17,6 +17,7 @@ void export_label(gdstk::Cell &cell, const Label &lbl, const Layout &layout, int
 void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout);
 bool export_instance(gdstk::Cell &cell, const Instance &inst, const map<int, gdstk::Cell*> &cells);
 gdstk::Cell *export_layout(const Layout &layout, const map<int, gdstk::Cell*> *cells=nullptr);
+void export_layout(gdstk::GdsWriter &writer, const Library &library, int idx, map<int, gdstk::Cell*> &cells);
 void export_layout(string filename, const Layout &layout);
 void export_library(gdstk::Library &lib, const Library &library);
 void export_library(string libname, string filename, const Library &library);
