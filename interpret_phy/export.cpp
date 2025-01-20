@@ -1,10 +1,26 @@
 #include "export.h"
 
 #include <filesystem>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
 namespace phy {
+
+string idToString(size_t id) {
+	// spice names are not sensitive to capitalization, and only support alphanum
+	// characters. Not enough character types to support base64.
+	static const string digits = "abcdefghijklmnopqrstuvwxyz012345";
+
+	std::string result;
+	for (int i = 0; i < (int)sizeof(size_t); i++) {
+		int idx = id & 0x1F;
+		id >>= 5;
+		result.push_back(digits[idx]);
+	}
+	return result;
+}
 
 string export_name(string name) {
 	// Do name mangling
@@ -63,11 +79,34 @@ void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
 	}
 }
 
-gdstk::Cell *export_layout(const Layout &layout) {
+bool export_instance(gdstk::Cell &cell, const Instance &inst, const map<int, gdstk::Cell*> &cells) {
+	auto pos = cells.find(inst.macro);
+	if (pos != cells.end()) {
+		cell.reference_array.append(new gdstk::Reference{
+				.type = gdstk::ReferenceType::Cell,
+				.cell = pos->second,
+				.origin = gdstk::Vec2{(double)inst.pos[0], (double)inst.pos[1]},
+				.magnification = 1,
+			});
+		return true;
+	}
+	return false;
+}
+
+gdstk::Cell *export_layout(const Layout &layout, const map<int, gdstk::Cell*> *cells) {
 	gdstk::Cell *cell = new gdstk::Cell();
-	cell->init(layout.name.c_str());
+	string name = layout.name;
+	if (name.empty()) {
+		string name = "anon_" + idToString(rand());
+	}
+	cell->init(name.c_str());
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
 		export_layer(*cell, layer->second, layout);
+	}
+	if (cells != nullptr) {
+		for (auto inst = layout.inst.begin(); inst != layout.inst.end(); inst++) {
+			export_instance(*cell, *inst, *cells);
+		}
 	}
 	return cell;
 }
@@ -80,18 +119,44 @@ void export_layout(string filename, const Layout &layout) {
 	lib.free_all();
 }
 
-void export_library(gdstk::Library &lib, const Library &library, set<string> cellNames) {
-	for (auto cell = library.macros.begin(); cell != library.macros.end(); cell++) {
-		if (not cell->name.empty() and (cellNames.empty() or cellNames.find(cell->name) != cellNames.end())) {
-			lib.cell_array.append(export_layout(*cell));
+void export_library(gdstk::Library &lib, const Library &library) {
+	map<int, gdstk::Cell*> cells;
+	vector<bool> hasCell(library.macros.size(), false);
+
+	for (int root = 0; root < (int)library.macros.size(); root++) {
+		if (hasCell[root]) {
+			continue;
+		}
+
+		vector<int> stack(1, root);
+		while (not stack.empty()) {
+			int curr = stack.back();
+			auto currMacro = library.macros.begin()+curr;
+			
+			bool done = true;
+			for (auto i = currMacro->inst.begin(); i != currMacro->inst.end(); i++) {
+				if (not hasCell[i->macro]) {
+					done = false;
+					stack.erase(std::remove(stack.begin(), stack.end(), i->macro), stack.end());
+					stack.push_back(i->macro);
+				}
+			}
+
+			if (done) {
+				gdstk::Cell *gds = export_layout(library.macros[curr], &cells);
+				lib.cell_array.append(gds);
+				cells.insert({curr, gds});
+				hasCell[curr] = true;
+				stack.pop_back();
+			}
 		}
 	}
 }
 
-void export_library(string libname, string filename, const Library &library, set<string> cellNames) {
+void export_library(string libname, string filename, const Library &library) {
 	gdstk::Library lib = {};
 	lib.init(libname.c_str(), ((double)library.tech->dbunit)*1e-6, ((double)library.tech->dbunit)*1e-6);
-	export_library(lib, library, cellNames);
+	export_library(lib, library);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
 }
