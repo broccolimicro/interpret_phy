@@ -82,11 +82,24 @@ void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
 bool export_instance(gdstk::Cell &cell, const Instance &inst, const map<int, gdstk::Cell*> &cells) {
 	auto pos = cells.find(inst.macro);
 	if (pos != cells.end()) {
+		double rotation = 0.0;
+		bool x_reflection = false;
+		if (inst.dir == vec2i(-1, 1)) {
+			rotation = M_PI;
+			x_reflection = true;
+		} else if (inst.dir == vec2i(1, -1)) {
+			x_reflection = true;
+		} else if (inst.dir == vec2i(-1, -1)) {
+			rotation = M_PI;
+		}
+
 		cell.reference_array.append(new gdstk::Reference{
 				.type = gdstk::ReferenceType::Cell,
 				.cell = pos->second,
 				.origin = gdstk::Vec2{(double)inst.pos[0], (double)inst.pos[1]},
-				.magnification = 1,
+				.rotation = rotation,
+				.magnification = 1.0,
+				.x_reflection = x_reflection,
 			});
 		return true;
 	}
