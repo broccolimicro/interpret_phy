@@ -1,5 +1,5 @@
 NAME          = interpret_phy
-DEPEND        = phy gdstk/include
+DEPEND        = phy ucs gdstk/include
 
 SRCDIR        = $(NAME)
 TESTDIR       = tests
