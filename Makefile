@@ -1,19 +1,36 @@
 NAME          = interpret_phy
-DEPEND        = phy ucs gdstk/include
+DEPEND        = phy boolean
+TEST_DEPEND   = phy boolean
+
+COVERAGE ?= 0
+
+ifeq ($(COVERAGE),0)
+CXXFLAGS = -std=c++20 -g -Wall -fmessage-length=0 -O2
+LDFLAGS  =
+else
+CXXFLAGS = -std=c++20 -g -Wall -fmessage-length=0 -O0 --coverage -fprofile-arcs -ftest-coverage
+LDFLAGS  = --coverage -fprofile-arcs -ftest-coverage 
+endif
 
 SRCDIR        = $(NAME)
-TESTDIR       = tests
-GTEST        := ../../googletest
-GTEST_I      := -I$(GTEST)/googletest/include -I.
-GTEST_L      := -L$(GTEST)/build/lib -L.
-
-CXXFLAGS      = -std=c++17 -O2 -g -Wall -fmessage-length=0 $(DEPEND:%=-I../%) -I.
-LDFLAGS	      =  
+INCLUDE_PATHS = $(DEPEND:%=-I../%) -I../gdstk/include -I.
+LIBRARY_PATHS =
+LIBRARIES     =
 
 SOURCES	     := $(shell mkdir -p $(SRCDIR); find $(SRCDIR) -name '*.cpp')
 OBJECTS	     := $(SOURCES:%.cpp=build/%.o)
 DEPS         := $(shell mkdir -p build/$(SRCDIR); find build/$(SRCDIR) -name '*.d')
-TARGET        = lib$(NAME).a
+TARGET	      = lib$(NAME).a
+
+TESTDIR       = tests
+
+ifndef GTEST
+override GTEST=../../googletest
+endif
+
+TEST_INCLUDE_PATHS = -I$(GTEST)/googletest/include $(TEST_DEPEND:%=-I../%) -I../gdstk/include -I.
+TEST_LIBRARY_PATHS = -L$(GTEST)/build/lib $(TEST_DEPEND:%=-L../%) -L.
+TEST_LIBRARIES = -l$(NAME) $(TEST_DEPEND:%=-l%) -pthread -lgtest
 
 TESTS        := $(shell mkdir -p $(TESTDIR); find $(TESTDIR) -name '*.cpp')
 TEST_OBJECTS := $(TESTS:%.cpp=build/%.o) build/$(TESTDIR)/gtest_main.o
@@ -32,13 +49,29 @@ ifeq ($(OS),Windows_NT)
             CXXFLAGS += -D IA32
         endif
     endif
+    LIBRARIES += -l:libgdstk.a -l:libclipper.a -l:libqhullstatic_r.a -lz
+    LIBRARY_PATHS += -L../gdstk/build/lib -L../gdstk/build/lib64
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
         CXXFLAGS += -D LINUX
+        LIBRARIES += -l:libgdstk.a -l:libclipper.a -l:libqhullstatic_r.a -lz
+        LIBRARY_PATHS += -L../gdstk/build/lib -L../gdstk/build/lib64
     endif
     ifeq ($(UNAME_S),Darwin)
-        CXXFLAGS += -D OSX -mmacos-version-min=12.0 -Wno-missing-braces -Wno-varargs
+        CXXFLAGS += -D OSX -mmacos-version-min=12.0 -Wno-missing-braces
+        INCLUDE_PATHS += -I$(shell brew --prefix qhull)/include
+        LIBRARY_PATHS += -L../gdstk/build/lib -L$(shell brew --prefix qhull)/lib
+        LIBRARIES     += -lgdstk -lclipper -lqhullstatic_r -lz
+        LDFLAGS	      += -Wl,-rpath,/opt/homebrew/opt/python@3.15/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python@3.14/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python@3.13/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python@3.09/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python@3/Frameworks/Python.framework/Versions/Current/lib \
+-Wl,-rpath,/opt/homebrew/opt/python/Frameworks/Python.framework/Versions/Current/lib
     endif
     UNAME_P := $(shell uname -p)
     ifeq ($(UNAME_P),x86_64)
@@ -59,27 +92,40 @@ lib: $(TARGET)
 
 tests: lib $(TEST_TARGET)
 
+coverage: clean
+	$(MAKE) COVERAGE=1 tests
+	./$(TEST_TARGET) || true  # Continue even if tests fail
+	lcov --capture --directory build/$(SRCDIR) --output-file coverage.info
+	lcov --ignore-errors unused --remove coverage.info '/usr/include/*' '*/googletest/*' '*/tests/*' --output-file coverage_filtered.info
+	genhtml coverage_filtered.info --output-directory coverage_report
+
 $(TARGET): $(OBJECTS)
 	ar rvs $(TARGET) $(OBJECTS)
 
 build/$(SRCDIR)/%.o: $(SRCDIR)/%.cpp 
 	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) $(LDFLAGS) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c -o $@ $<
+	@$(CXX) $(CXXFLAGS) $(LDFLAGS) $(INCLUDE_PATHS) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(INCLUDE_PATHS) -c -o $@ $<
 
-$(TEST_TARGET): $(TEST_OBJECTS)
-	$(CXX) $(CXXFLAGS) $(GTEST_L) $^ -pthread -l$(NAME) -lgtest -o $(TEST_TARGET)
+$(TEST_TARGET): $(TEST_OBJECTS) $(OBJECTS) $(TARGET)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(TEST_LIBRARY_PATHS) $(TEST_OBJECTS) $(TEST_LIBRARIES) -o $(TEST_TARGET)
 
 build/$(TESTDIR)/%.o: $(TESTDIR)/%.cpp
 	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) $(GTEST_I) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
-	$(CXX) $(CXXFLAGS) $(GTEST_I) $< -c -o $@
+	@$(CXX) $(CXXFLAGS) $(TEST_INCLUDE_PATHS) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
+	$(CXX) $(CXXFLAGS) $(TEST_INCLUDE_PATHS) $< -c -o $@
 
 build/$(TESTDIR)/gtest_main.o: $(GTEST)/googletest/src/gtest_main.cc
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(GTEST_I) $< -c -o $@
+	$(CXX) $(CXXFLAGS) $(TEST_INCLUDE_PATHS) $< -c -o $@
 
 include $(DEPS) $(TEST_DEPS)
 
 clean:
-	rm -rf build $(TARGET) $(TEST_TARGET)
+	rm -rf build $(TARGET) $(TEST_TARGET) coverage.info coverage_filtered.info coverage_report *.gcda *.gcno
+
+clean-test:
+	rm -rf build/$(TESTDIR) $(TEST_TARGET)
+
+clean-coverage:
+	rm -rf coverage.info coverage_filtered.info coverage_report *.gcda *.gcno
