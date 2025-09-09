@@ -1,7 +1,10 @@
 #pragma once
 
+#ifndef M_PI
 // windows doesn't it's constants in math.h, this is required to compile gdstk import on windows.
 #define M_PI 3.14159265358979323846
+#endif
+
 #include <gdstk/gdstk.hpp>
 #include <phy/Layout.h>
 #include <phy/Library.h>
