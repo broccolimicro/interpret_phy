@@ -124,7 +124,7 @@ gdstk::Cell *export_layout(const Layout &layout, const map<int, gdstk::Cell*> *c
 	return cell;
 }
 
-void export_layout(gdstk::GdsWriter &writer, const Library &library, int idx, map<int, gdstk::Cell*> &cells) {
+void export_layout(gdstk::GdsWriter &writer, const vector<Layout> &library, int idx, map<int, gdstk::Cell*> &cells) {
 	if (cells.find(idx) != cells.end()) {
 		return;
 	}
@@ -132,7 +132,7 @@ void export_layout(gdstk::GdsWriter &writer, const Library &library, int idx, ma
 	vector<int> stack(1, idx);
 	while (not stack.empty()) {
 		int curr = stack.back();
-		auto currMacro = library.macros.begin()+curr;
+		auto currMacro = library.begin()+curr;
 		
 		bool done = true;
 		for (auto i = currMacro->inst.begin(); i != currMacro->inst.end(); i++) {
@@ -144,7 +144,7 @@ void export_layout(gdstk::GdsWriter &writer, const Library &library, int idx, ma
 		}
 
 		if (done) {
-			gdstk::Cell *gds = export_layout(library.macros[curr], &cells);
+			gdstk::Cell *gds = export_layout(library[curr], &cells);
 			writer.write_cell(*gds);
 			cells.insert({curr, gds});
 			stack.pop_back();
@@ -160,11 +160,11 @@ void export_layout(string filename, const Layout &layout) {
 	lib.free_all();
 }
 
-void export_library(gdstk::Library &lib, const Library &library) {
+void export_library(gdstk::Library &lib, const vector<Layout> &library) {
 	map<int, gdstk::Cell*> cells;
-	vector<bool> hasCell(library.macros.size(), false);
+	vector<bool> hasCell(library.size(), false);
 
-	for (int root = 0; root < (int)library.macros.size(); root++) {
+	for (int root = 0; root < (int)library.size(); root++) {
 		if (hasCell[root]) {
 			continue;
 		}
@@ -172,7 +172,7 @@ void export_library(gdstk::Library &lib, const Library &library) {
 		vector<int> stack(1, root);
 		while (not stack.empty()) {
 			int curr = stack.back();
-			auto currMacro = library.macros.begin()+curr;
+			auto currMacro = library.begin()+curr;
 			
 			bool done = true;
 			for (auto i = currMacro->inst.begin(); i != currMacro->inst.end(); i++) {
@@ -184,7 +184,7 @@ void export_library(gdstk::Library &lib, const Library &library) {
 			}
 
 			if (done) {
-				gdstk::Cell *gds = export_layout(library.macros[curr], &cells);
+				gdstk::Cell *gds = export_layout(library[curr], &cells);
 				lib.cell_array.append(gds);
 				cells.insert({curr, gds});
 				hasCell[curr] = true;
@@ -194,9 +194,11 @@ void export_library(gdstk::Library &lib, const Library &library) {
 	}
 }
 
-void export_library(string libname, string filename, const Library &library) {
+void export_library(string libname, string filename, const vector<Layout> &library) {
 	gdstk::Library lib = {};
-	lib.init(libname.c_str(), ((double)library.tech->dbunit)*1e-6, ((double)library.tech->dbunit)*1e-6);
+	if (not library.empty()) {
+		lib.init(libname.c_str(), ((double)library[0].tech->dbunit)*1e-6, ((double)library[0].tech->dbunit)*1e-6);
+	}
 	export_library(lib, library);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();

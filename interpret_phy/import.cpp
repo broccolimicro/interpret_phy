@@ -105,12 +105,12 @@ bool import_layout(Layout &layout, string path, string cellName) {
 	return result;
 }
 
-bool import_library(phy::Library &lib, string path) {
-	gdstk::Library gds = gdstk::read_gds(path.c_str(), ((double)lib.tech->dbunit)*1e-6, ((double)lib.tech->dbunit)*1e-6, nullptr, nullptr);
+bool import_library(vector<Layout> &lib, const Tech &tech, string path) {
+	gdstk::Library gds = gdstk::read_gds(path.c_str(), ((double)tech.dbunit)*1e-6, ((double)tech.dbunit)*1e-6, nullptr, nullptr);
 	bool result = true;
-	lib.macros.resize(gds.cell_array.count, Layout(*lib.tech));
+	lib.resize(gds.cell_array.count, Layout(tech));
 	for (int i = 0; i < (int)gds.cell_array.count; i++) {
-		result = import_layout(lib.macros[i], gds.cell_array[i]) and result;
+		result = import_layout(lib[i], gds.cell_array[i]) and result;
 	}
 
 	gds.free_all();
