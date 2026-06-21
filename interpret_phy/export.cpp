@@ -79,34 +79,43 @@ void export_layer(gdstk::Cell &cell, const Layer &layer, const Layout &layout) {
 	}
 }
 
-bool export_instance(gdstk::Cell &cell, const Instance &inst, const map<int, gdstk::Cell*> &cells) {
-	auto pos = cells.find(inst.macro);
-	if (pos != cells.end()) {
-		double rotation = 0.0;
-		bool x_reflection = false;
-		if (inst.dir == vec2i(-1, 1)) {
-			rotation = M_PI;
-			x_reflection = true;
-		} else if (inst.dir == vec2i(1, -1)) {
-			x_reflection = true;
-		} else if (inst.dir == vec2i(-1, -1)) {
-			rotation = M_PI;
-		}
-
-		cell.reference_array.append(new gdstk::Reference{
-				.type = gdstk::ReferenceType::Cell,
-				.cell = pos->second,
-				.origin = gdstk::Vec2{(double)inst.pos[0], (double)inst.pos[1]},
-				.rotation = rotation,
-				.magnification = 1.0,
-				.x_reflection = x_reflection,
-			});
-		return true;
+void export_instance(gdstk::Cell &cell, const Instance &inst, const map<std::string, gdstk::Cell*> *cells) {
+	double rotation = 0.0;
+	bool x_reflection = false;
+	if (inst.dir == vec2i(-1, 1)) {
+		rotation = M_PI;
+		x_reflection = true;
+	} else if (inst.dir == vec2i(1, -1)) {
+		x_reflection = true;
+	} else if (inst.dir == vec2i(-1, -1)) {
+		rotation = M_PI;
 	}
-	return false;
+
+	if (cells != nullptr) {
+		auto pos = cells->find(inst.macro);
+		if (pos != cells->end() and pos->second != nullptr) {
+			cell.reference_array.append(new gdstk::Reference{
+					.type = gdstk::ReferenceType::Cell,
+					.cell = pos->second,
+					.origin = gdstk::Vec2{(double)inst.pos[0], (double)inst.pos[1]},
+					.rotation = rotation,
+					.magnification = 1.0,
+					.x_reflection = x_reflection,
+				});
+		}
+	}
+
+	cell.reference_array.append(new gdstk::Reference{
+			.type = gdstk::ReferenceType::Name,
+			.name = strdup(inst.macro.c_str()),
+			.origin = gdstk::Vec2{(double)inst.pos[0], (double)inst.pos[1]},
+			.rotation = rotation,
+			.magnification = 1.0,
+			.x_reflection = x_reflection,
+		});
 }
 
-gdstk::Cell *export_layout(const Layout &layout, const map<int, gdstk::Cell*> *cells) {
+gdstk::Cell *export_layout(const Layout &layout, map<std::string, gdstk::Cell*> *cells) {
 	gdstk::Cell *cell = new gdstk::Cell();
 	string name = layout.name;
 	if (name.empty()) {
@@ -116,20 +125,35 @@ gdstk::Cell *export_layout(const Layout &layout, const map<int, gdstk::Cell*> *c
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
 		export_layer(*cell, layer->second, layout);
 	}
+	for (auto inst = layout.inst.begin(); inst != layout.inst.end(); inst++) {
+		export_instance(*cell, *inst, cells);
+	}
 	if (cells != nullptr) {
-		for (auto inst = layout.inst.begin(); inst != layout.inst.end(); inst++) {
-			export_instance(*cell, *inst, *cells);
-		}
+		cells->insert({name, cell});
 	}
 	return cell;
 }
 
-void export_layout(gdstk::GdsWriter &writer, const vector<Layout> &library, int idx, map<int, gdstk::Cell*> &cells) {
-	if (cells.find(idx) != cells.end()) {
-		return;
+void export_layout(gdstk::GdsWriter &writer, const Layout &layout, map<std::string, gdstk::Cell*> *cells) {
+	gdstk::Cell *gds = export_layout(layout, cells);
+	writer.write_cell(*gds);
+}
+
+void export_layout(string filename, const Layout &layout, map<std::string, gdstk::Cell*> *cells) {
+	gdstk::Library lib = {};
+	lib.init(layout.name.c_str(), ((double)layout.tech->dbunit)*1e-6, ((double)layout.tech->dbunit)*1e-6);
+	lib.cell_array.append(export_layout(layout, cells));
+	lib.write_gds(filename.c_str(), 0, NULL);
+	lib.free_all();
+}
+
+/*void export_library(gdstk::GdsWriter &writer, const vector<Layout> &library, int start, map<std::string, gdstk::Cell*> *cells) {
+	map<std::string, gdstk::Cell*> tmp;
+	if (cells == nullptr) {
+		cells = &tmp;
 	}
 
-	vector<int> stack(1, idx);
+	vector<int> stack(1, start);
 	while (not stack.empty()) {
 		int curr = stack.back();
 		auto currMacro = library.begin()+curr;
@@ -150,14 +174,6 @@ void export_layout(gdstk::GdsWriter &writer, const vector<Layout> &library, int 
 			stack.pop_back();
 		}
 	}
-}
-
-void export_layout(string filename, const Layout &layout) {
-	gdstk::Library lib = {};
-	lib.init(layout.name.c_str(), ((double)layout.tech->dbunit)*1e-6, ((double)layout.tech->dbunit)*1e-6);
-	lib.cell_array.append(export_layout(layout));
-	lib.write_gds(filename.c_str(), 0, NULL);
-	lib.free_all();
 }
 
 void export_library(gdstk::Library &lib, const vector<Layout> &library) {
@@ -202,7 +218,7 @@ void export_library(string libname, string filename, const vector<Layout> &libra
 	export_library(lib, library);
 	lib.write_gds(filename.c_str(), 0, NULL);
 	lib.free_all();
-}
+}*/
 
 void export_lef(string filename, const Layout &layout, int type) {
 	// See https://github.com/KLayout/klayout/blob/766dd675c11d98b2461c448035197f6e934cb497/src/plugins/streamers/lefdef/db_plugin/dbLEFDEFImporter.cc#L1085
