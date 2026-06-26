@@ -119,7 +119,7 @@ gdstk::Cell *export_layout(const Layout &layout, map<std::string, gdstk::Cell*> 
 	gdstk::Cell *cell = new gdstk::Cell();
 	string name = layout.name;
 	if (name.empty()) {
-		string name = "anon_" + idToString(rand());
+		name = "anon_" + idToString(rand());
 	}
 	cell->init(name.c_str());
 	for (auto layer = layout.layers.begin(); layer != layout.layers.end(); layer++) {
