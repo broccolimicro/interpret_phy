@@ -128,6 +128,9 @@ gdstk::Cell *export_layout(const Layout &layout, map<std::string, gdstk::Cell*> 
 	for (auto inst = layout.inst.begin(); inst != layout.inst.end(); inst++) {
 		export_instance(*cell, *inst, cells);
 	}
+	for (auto prop = layout.properties.begin(); prop != layout.properties.end(); prop++) {
+		gdstk::set_property(cell->properties, prop->first.c_str(), prop->second.c_str(), true);
+	}
 	if (cells != nullptr) {
 		cells->insert({name, cell});
 	}

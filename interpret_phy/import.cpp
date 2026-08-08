@@ -81,10 +81,17 @@ bool import_layout(Layout &layout, const gdstk::Cell *gdsCell) {
 		int minor = gdstk::get_type(label->tag);
 
 		int layer = layout.tech->findPaint(major, minor);
-		layout.label(layer, Label(-1, origin, txt)); 
+		layout.label(layer, Label(-1, origin, txt));
+	}
+
+	for (gdstk::Property *prop = gdsCell->properties; prop != nullptr; prop = prop->next) {
+		if (prop->value->type == gdstk::PropertyType::String) {
+			layout.properties.insert({std::string(prop->name), std::string((const char*)prop->value->bytes, prop->value->count)});
+		}
 	}
 
 	layout.normalize();
+	//layout.trace();
 	return success;
 }
 
